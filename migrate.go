@@ -8,34 +8,12 @@ import (
 	"github.com/suifengpiao14/sqlbuilder"
 )
 
-type Scene string // 迁移场景
-
 const (
-	SCENE_DDL_CREATE Scene = "create"
-	SCENE_DDL_MODIFY Scene = "modify"
-	SCENE_DDL_APPEND Scene = "append"
-	SCENE_DDL_DELETE Scene = "delete"
+	SCENE_DDL_CREATE sqlbuilder.Scene = "create"
+	SCENE_DDL_MODIFY sqlbuilder.Scene = "modify"
+	SCENE_DDL_APPEND sqlbuilder.Scene = "append"
+	SCENE_DDL_DELETE sqlbuilder.Scene = "delete"
 )
-
-const (
-// SCENE_SQL_INSERT Scene = "insert"
-// SCENE_SQL_UPDATE Scene = "update"
-// Scene = "select"
-)
-
-const (
-	SCENE_SQL_INSERT   Scene = "insert"
-	SCENE_SQL_UPDATE   Scene = "update"
-	SCENE_SQL_DELETE   Scene = "delete"
-	SCENE_SQL_SELECT   Scene = "select"
-	SCENE_SQL_VIEW     Scene = "view"
-	SCENE_SQL_INCREASE Scene = "increse" // 字段递增
-	SCENE_SQL_DECREASE Scene = "decrese" // 字段递减
-)
-
-func (s Scene) Is(target Scene) bool {
-	return strings.EqualFold(string(s), string(target))
-}
 
 type Token string //ddl 语法部分token
 
@@ -45,14 +23,14 @@ func (t Token) IsSame(target Token) bool {
 
 type Migrate struct {
 	Dialect sqlbuilder.Driver
-	Scene   Scene
+	Scene   sqlbuilder.Scene
 	Options []MigrateOptionI
 	DDL     string
 }
 
 type Migrates []Migrate
 
-func (ms Migrates) GetByScene(driver sqlbuilder.Driver, scene Scene) (subMs Migrates) {
+func (ms Migrates) GetByScene(driver sqlbuilder.Driver, scene sqlbuilder.Scene) (subMs Migrates) {
 	subMs = make(Migrates, 0)
 	for _, m := range ms {
 		if driver.IsSame(m.Dialect) && scene.Is(m.Scene) {

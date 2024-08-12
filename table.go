@@ -30,6 +30,57 @@ type Column struct {
 	Tags          sqlbuilder.Tags  `json:"tags"`
 }
 
+func DBColumns(fs sqlbuilder.Fields) (columns Columns, err error) {
+	columns = make(Columns, 0)
+	for _, f := range fs {
+		column, err := DBColumn(f)
+		if err != nil {
+			return nil, err
+		}
+		columns = append(columns, *column)
+	}
+	return columns, nil
+}
+
+func DBColumn(f *sqlbuilder.Field) (doc *Column, err error) {
+	schema := f.Schema
+	if schema == nil {
+		schema = new(sqlbuilder.Schema)
+		f.Schema = schema
+	}
+
+	unsigned := schema.Minimum > -1 // 默认为无符号，需要符号，则最小值设置为最大负数即可
+	typeMap := map[string]string{
+		"int":    "int",
+		"string": "string",
+	}
+	typ := typeMap[schema.Type.String()]
+	if typ == "" {
+		if schema.Minimum > 0 || schema.Maximum > 0 { // 如果规定了最小值,最大值，默认为整型
+			typ = "int"
+		} else {
+			typ = "string"
+		}
+	}
+
+	doc = &Column{
+		Name:          f.DBName(),
+		Comment:       schema.FullComment(),
+		Unsigned:      unsigned,
+		Type:          typ,
+		Default:       schema.Default,
+		Enums:         schema.Enums,
+		MaxLength:     schema.MaxLength,
+		MinLength:     schema.MinLength,
+		Maximum:       schema.Maximum,
+		Minimum:       schema.Minimum,
+		Primary:       schema.Primary,
+		AutoIncrement: schema.AutoIncrement,
+		Tags:          f.GetTags(),
+	}
+	return doc, nil
+}
+
 type DBFunc string
 
 type TypeReflect[T int | uint] struct {
@@ -88,20 +139,6 @@ var TypeReflectsString = TypeReflects[int]{
 	{UpperLimit: 16777215, DBType: "MEDIUMTEXT", Size: -1, NoDefaultValue: true}, // size =-1 不设置大小
 	{UpperLimit: 4294967295, DBType: "LONGTEXT", Size: -1, NoDefaultValue: true}, // size =-1 不设置大小
 }
-
-const (
-	UnsinedInt_maximum_tinyint   = 1<<8 - 1
-	UnsinedInt_maximum_smallint  = 1<<16 - 1
-	UnsinedInt_maximum_mediumint = 1<<24 - 1
-	UnsinedInt_maximum_int       = 1<<32 - 1
-	UnsinedInt_maximum_bigint    = 1<<64 - 1
-
-	Int_maximum_tinyint   = 1<<7 - 1
-	Int_maximum_smallint  = 1<<15 - 1
-	Int_maximum_mediumint = 1<<23 - 1
-	Int_maximum_int       = 1<<31 - 1
-	Int_maximum_bigint    = 1<<63 - 1
-)
 
 // 无符号整型
 var TypeReflectsUnsinedInt = TypeReflects[uint]{
