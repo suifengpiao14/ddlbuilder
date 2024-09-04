@@ -258,25 +258,69 @@ func Column2DDLMysql(col *Column) (ddl string) {
 
 type Columns []Column
 
-func (cols Columns) DDL(driver sqlbuilder.Driver) (ddl string) {
-	lines := make([]string, 0)
-	for _, col := range cols {
-		lines = append(lines, col.DDL(driver))
-	}
-	for _, col := range cols {
-		lines = append(lines, col.PrimaryDDL(driver))
-	}
+func (cols Columns) DDL(driver sqlbuilder.Driver) (lines []string) {
 	arr := make([]string, 0)
-	for _, l := range lines {
+	for _, col := range cols {
+		arr = append(arr, col.DDL(driver))
+	}
+	for _, col := range cols {
+		arr = append(arr, col.PrimaryDDL(driver))
+	}
+
+	lines = make([]string, 0)
+	for _, l := range arr {
 		if strings.TrimSpace(l) == "" {
 			continue
 		}
-		arr = append(arr, l)
+		lines = append(lines, l)
 	}
+	return lines
+}
+func (cls Columns) GetByTag(tag string) (subColumns Columns) {
+	subColumns = make(Columns, 0)
+	for _, col := range cls {
+		if col.Tags.HastTag(tag) {
+			subColumns = append(subColumns, col)
+		}
+	}
+	return subColumns
+}
 
-	ddl = strings.Join(arr, ",\n")
-	ddl = fmt.Sprintf("%s\n", ddl)
-	return ddl
+type Index struct {
+	Columns []Column
+	Unique  bool
+}
+
+func (index Index) DDL(driver sqlbuilder.Driver) (ddl string) {
+	feildNames := make([]string, 0)
+	for _, col := range index.Columns {
+		feildNames = append(feildNames, col.Name)
+	}
+	key := "index"
+	namePrefix := "idx"
+	if index.Unique {
+		key = "unique"
+		namePrefix = "uk"
+	}
+	name := fmt.Sprintf("%s_%s", namePrefix, strings.Join(feildNames, "_"))
+	return fmt.Sprintf("%s %s(%s)", key, name, strings.Join(feildNames, ","))
+}
+
+type Indexs []Index
+
+func (indexs Indexs) DDL(driver sqlbuilder.Driver) (lines []string) {
+	arr := make([]string, 0)
+	for _, index := range indexs {
+		arr = append(arr, index.DDL(driver))
+	}
+	lines = make([]string, 0)
+	for _, l := range arr {
+		if strings.TrimSpace(l) == "" {
+			continue
+		}
+		lines = append(lines, l)
+	}
+	return lines
 }
 
 type Table struct {
@@ -284,6 +328,7 @@ type Table struct {
 	Driver    sqlbuilder.Driver
 	Columns   Columns // 这里占时记录列名称，但是实际上不够
 	Comment   string
+	Indexs    Indexs
 }
 
 func (t *Table) GetTable() string {
@@ -293,7 +338,11 @@ func (t *Table) GetTable() string {
 func (t *Table) DDL() (ddl string) {
 	var w bytes.Buffer
 	w.WriteString(fmt.Sprintf(" CREATE TABLE IF NOT EXISTS `%s`(\n", t.GetTable()))
-	w.WriteString(t.GetColumns().DDL(t.GetDriver()))
+	liens := t.GetColumns().DDL(t.GetDriver())
+	liens = append(liens, t.Indexs.DDL(t.GetDriver())...)
+	str := strings.Join(liens, ",\n")
+	w.WriteString(str)
+	w.WriteString("\n")
 	w.WriteString(fmt.Sprintf(`)ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COMMENT="%s";`, t.Comment))
 	return w.String()
 }
