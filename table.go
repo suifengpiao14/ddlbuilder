@@ -329,15 +329,24 @@ type Table struct {
 	Columns   Columns // 这里占时记录列名称，但是实际上不够
 	Comment   string
 	Indexs    Indexs
+	withDrop  bool
 }
 
 func (t *Table) GetTable() string {
 	return t.TableName
 }
+func (t *Table) WithDrop() *Table {
+	t.withDrop = true
+	return t
+}
 
 func (t *Table) DDL() (ddl string) {
 	var w bytes.Buffer
-	w.WriteString(fmt.Sprintf(" CREATE TABLE IF NOT EXISTS `%s`(\n", t.GetTable()))
+	if t.withDrop {
+		w.WriteString(fmt.Sprintf("DROP TABLE IF EXISTS `%s`;\n", t.GetTable()))
+	}
+
+	w.WriteString(fmt.Sprintf("CREATE TABLE IF NOT EXISTS `%s`(\n", t.GetTable()))
 	liens := t.GetColumns().DDL(t.GetDriver())
 	liens = append(liens, t.Indexs.DDL(t.GetDriver())...)
 	str := strings.Join(liens, ",\n")
