@@ -98,10 +98,12 @@ func (a TypeReflects[T]) Swap(i, j int)      { a[i], a[j].UpperLimit = a[j], a[i
 func (a TypeReflects[T]) Less(i, j int) bool { return a[i].UpperLimit < a[j].UpperLimit }
 
 func (trs TypeReflects[T]) GetByUpperLimitWithDefault(upperLimit T) (tr *TypeReflect[T]) {
-	sort.Sort(trs) // 先排序（从小到大）
-	for _, t := range trs {
-		if t.UpperLimit >= upperLimit {
-			return &t
+	if upperLimit > 0 {
+		sort.Sort(trs) // 先排序（从小到大）
+		for _, t := range trs {
+			if t.UpperLimit >= upperLimit {
+				return &t
+			}
 		}
 	}
 	tr = trs.GetDefault()
@@ -293,6 +295,9 @@ type Index struct {
 
 func (index Index) DDL(driver sqlbuilder.Driver) (ddl string) {
 	feildNames := make([]string, 0)
+	if len(index.Columns) == 0 {
+		return ""
+	}
 	for _, col := range index.Columns {
 		feildNames = append(feildNames, col.Name)
 	}
