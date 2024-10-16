@@ -58,7 +58,7 @@ func TestProfileDDL(t *testing.T) {
 
 	profileFields := new(ProfileFields).Builder()
 
-	fields := sqlbuilder.FieldStructToArray(profileFields, nil, nil)
+	fields := sqlbuilder.StructToFields(profileFields, nil, nil)
 	dbColumns, err := ddlbuilder.DBColumns(fields)
 	require.NoError(t, err)
 	table := ddlbuilder.Table{
