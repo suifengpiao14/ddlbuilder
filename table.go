@@ -64,7 +64,7 @@ func DBColumn(f *sqlbuilder.Field) (doc *Column, err error) {
 	}
 
 	doc = &Column{
-		Name:          f.DBName(),
+		Name:          f.DBColumnName().Name,
 		Comment:       schema.FullComment(),
 		Unsigned:      unsigned,
 		Type:          typ,
